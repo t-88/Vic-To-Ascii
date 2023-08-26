@@ -3,16 +3,19 @@ takes ur Vic (video, image , camera capture) removes the colors and slaps some a
 
 
 # How To Use 
--   default option is to turn img into ascii.    
+-   if the terminal output doesnt work that means u are using the wrong terminal, this app was tested on alacritty.
+-   by default Victa only handles imgs ant its uses stbi to load them.    
     -   ```
         $ ./run.sh
-        $ ./main -h
+        $ ./Victa -h
         ```
--   if u want to use capture feature
+
+-   if u want to use video features u need to use opencv 
     -   make sure u have opencv installed or install it **apt install libopencv-dev**
     -   make sure u minimize ur terminal before to see full output, it will seem random when its zoomed in
     -   ```
-            $ g++ main.cpp -o main `pkg-config --cflags --libs opencv4
+            $ ./run.sh -opencv
+            $ ./Victa -h
             $ ./main -cap-frame ; read          # capture a frame print it and wait for input
             $ ./main -cap                       # capture stream this will fill ur terminal
         ``` 
@@ -24,4 +27,6 @@ takes ur Vic (video, image , camera capture) removes the colors and slaps some a
 ![me drining coffee](./dev-imgs/me_drinking_coffe.png)     
 ## Capture Camera To Ascii    
 ![me testing](./dev-imgs/me_testing.gif)     
+## Video To Ascii    
+![bad apple](./dev-imgs/bad_apple.gif)     
      

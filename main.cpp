@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 #include <cmath>
 
@@ -5,15 +6,30 @@
 #include <vector>
 #include <string>
 
-
-#include <opencv2/opencv.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
-
-
-
 #define STB_IMAGE_IMPLEMENTATION
 #include "third_party/stb_image.h"
+
+
+#ifdef VID 
+    #include <opencv2/opencv.hpp>
+    #include <opencv2/imgproc.hpp>
+    #include <opencv2/highgui.hpp>
+#endif
+
+
+
+int clamp(int val, int min , int max);
+void print_help();
+void unknow_arg();
+
+void print_vec_to_terminal(std::vector<char> img, int w, int h);
+void print_img_to_terminal(const char* path);
+
+#ifdef VID 
+    std::vector<char> from_capture_to_ascii(int* w, int* h,cv::VideoCapture* cap);
+    std::vector<char> from_capture_once_to_ascii(int* w, int* h);
+    void print_capture_to_terminal(bool stream);
+#endif
 
 
 static std::string shadding = " .:-=+*#%@";
@@ -37,9 +53,12 @@ void print_help() {
     printf("Vic To Ascii help:\n");
     printf("\t -h            : shows help\n");
     printf("\t -img src-path : take img path and prints it to terminal\n");
+#ifdef VID 
+    printf("\t -vid-frame path frame-idx: prints a frame from video to terminal\n");
+    printf("\t -vid path : take video path and saves it to out path\n");
     printf("\t -cap-frame    : capture frame from ur camera and prints it to terminal\n");
     printf("\t -cap          : capture camera stream and prints it to terminal\n");
-    printf("\t -vid path out : take video path and saves it to out path\n");
+#endif
 }
 void unknow_arg() {
     printf("unkown arg given\n");
@@ -55,9 +74,9 @@ void print_vec_to_terminal(std::vector<char> img, int w, int h) {
     }
 }
 
-std::vector<char> from_image_to_ascii(const char* path,int& w, int& h) {
+std::vector<char> from_image_to_ascii(const char* path,int* w, int* h) {
     int pitch = 3; // RGB
-    uint8_t* img = stbi_load(path,&w,&h,0,pitch);
+    uint8_t* img = stbi_load(path,w,h,0,pitch);
 
     if(stbi_failure_reason()) {
         std::cout << "[stbi Err] "<< stbi_failure_reason() << "\n";
@@ -65,11 +84,11 @@ std::vector<char> from_image_to_ascii(const char* path,int& w, int& h) {
     }
 
     std::vector<char> out;
-    for (int y = 0; y < h; y++) {
-        for (int x = 0; x < w; x++) {
-            int shade = (img[pitch * (x + y * w)+ 0]    +
-                        img[pitch *  (x + y * w) + 1] +
-                        img[pitch *  (x + y * w) + 2]) / 3;
+    for (int y = 0; y < *h; y++) {
+        for (int x = 0; x < *w; x++) {
+            int shade = (img[pitch * (x + y * (*w))+ 0]    +
+                        img[pitch *  (x + y * (*w)) + 1] +
+                        img[pitch *  (x + y * (*w)) + 2]) / 3;
 
             out.push_back(
                 shadding.at(clamp(shade / char_step,0,char_count - 1))
@@ -80,12 +99,12 @@ std::vector<char> from_image_to_ascii(const char* path,int& w, int& h) {
 }  
 void print_img_to_terminal(const char* path) {
     int w, h;
-    auto img = from_image_to_ascii(path,w,h);
+    auto img = from_image_to_ascii(path,&w,&h);
     print_vec_to_terminal(img,w,h);
 }
 
-
-std::vector<char> from_capture_to_ascii(int& w, int& h,cv::VideoCapture* cap = 0) {
+#ifdef VID 
+std::vector<char> from_capture_to_ascii(int* w, int* h,cv::VideoCapture* cap = 0) {
     // if no cap is provided then its a one frame capture
     // else its a stream capture
     // its build like that so i dont have to create a cap obj every-frame
@@ -104,8 +123,8 @@ std::vector<char> from_capture_to_ascii(int& w, int& h,cv::VideoCapture* cap = 0
     cv::Mat frame;
     *cap >> frame;
 
-    w = frame.cols;
-    h = frame.rows;
+    *w = frame.cols;
+    *h = frame.rows;
 
     // flip y-axis my cam capture returns reversed for some reason
     // obs also gives same problem
@@ -133,7 +152,7 @@ std::vector<char> from_capture_to_ascii(int& w, int& h,cv::VideoCapture* cap = 0
     }
     return out;
 }
-std::vector<char> from_capture_once_to_ascii(int& w, int& h) {
+std::vector<char> from_capture_once_to_ascii(int* w, int* h) {
     // capture_once captures one frame and returns it as ascii
     return from_capture_to_ascii(w,h,0);
 }
@@ -148,27 +167,73 @@ void print_capture_to_terminal(bool stream = false) {
 
     int w, h;
     if(!stream) {
-        auto img = from_capture_once_to_ascii(w,h);
+        auto img = from_capture_once_to_ascii(&w,&h);
         print_vec_to_terminal(img,w,h);
         return;
     }
 
     cv::VideoCapture cap(0);
     for (;;) {
-        auto img = from_capture_to_ascii(w,h,&cap);
+        auto img = from_capture_to_ascii(&w,&h,&cap);
 
         // clear screen
         std::cout << "\033[H\033[2J";
         print_vec_to_terminal(img,w,h);
 
-        // exit loop
-        if(cv::waitKey(33) == 27) break;
     }
 }
+
+std::vector<char> from_video_frame_to_ascii(const char* path,int frame_idx,int* w, int* h) {
+    cv::VideoCapture cap(path);
+    if (!cap.isOpened()) {
+        printf("[opencv Err] opencv isnt able to open the file\n");
+        exit(1);
+    }   
+    cap.set(cv::CAP_PROP_POS_FRAMES,frame_idx);
+    auto img = from_capture_to_ascii(w,h,&cap);   
+    cap.release();
+    
+    return img;
+}
+
+std::vector<char> from_video_to_ascii(cv::VideoCapture* cap,int* w, int* h) {
+    return from_capture_to_ascii(w,h,cap);   
+    
+}
+void print_video_frame_to_terminal(const char* path, int frame_idx) {
+    int w,  h;
+    auto img = from_video_frame_to_ascii(path,frame_idx,&w,&h);
+
+    print_vec_to_terminal(img,w,h);
+}
+void print_video_to_terminal(const char* path) {
+    cv::VideoCapture cap(path);
+
+    if (!cap.isOpened()) {
+        printf("[opencv Err] opencv isnt able to open the file\n");
+        exit(1);
+    } 
+    cap.set(cv::CAP_PROP_POS_FRAMES,0);
+
+    cv::Mat _;
+    int w,  h;
+    int cur = 0;
+    while (cap.retrieve(_,cur++)) {
+        auto img = from_video_to_ascii(&cap,&w,&h);
+
+        // clear screen
+        std::cout << "\033[H\033[2J";
+        print_vec_to_terminal(img,w,h);
+    }
+    cap.release();
+}
+#endif
+
 
 int main(int argc, char** argv) {
     char_count = shadding.size();
     char_step = 255 / char_count;
+
 
 
     switch (argc)
@@ -182,27 +247,44 @@ int main(int argc, char** argv) {
             if(strcmp(argv[1],"-h")  == 0) {
                 print_help();
                 break;
-            } else if (strcmp(argv[1],"-cap-frame")  == 0) {
+            } 
+#ifdef VID 
+            else if (strcmp(argv[1],"-cap-frame")  == 0) {
                 print_capture_to_terminal();
                 break;
             } else if (strcmp(argv[1],"-cap")  == 0) {
                 print_capture_to_terminal(true);
                 break;
             }
-            
-            
+#endif
+
             unknow_arg();
             exit(1);
         case 3:
             if(strcmp(argv[1],"-img") == 0) {
                 print_img_to_terminal(argv[2]);
-                break;
-            } else {
+            } 
+#ifdef VID 
+            else if(strcmp(argv[1],"-vid") == 0) {
+                print_video_to_terminal(argv[2]);
+            } 
+#endif
+            else {
                 printf("more args are required\n");
                 print_help();
                 exit(1);
             } 
         break;
+#ifdef VID 
+        case 4:
+
+            if(strcmp(argv[1],"-vid-frame") == 0) { 
+                print_video_frame_to_terminal(argv[2],atoi(argv[3]));
+                break;
+            }
+            unknow_arg();
+            exit(1);
+#endif
         default:
             printf("too many args\n");
             print_help();
