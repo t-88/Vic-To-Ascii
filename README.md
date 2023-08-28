@@ -16,9 +16,13 @@ takes ur Vic (video, image , camera capture) removes the colors and slaps some a
     -   ```
             $ ./run.sh -opencv
             $ ./Victa -h
-            $ ./main -cap-frame ; read          # capture a frame print it and wait for input
-            $ ./main -cap                       # capture stream this will fill ur terminal
+            $ ./Victa -cap-frame ; read          # capture a frame print it and wait for input
+            $ ./Victa -cap                       # capture stream this will fill ur terminal
         ``` 
+
+# Dependencies
+-   stb_image , stb_truetype , stb_image_write: stb is a great afing libary thkx to [nothings](https://github.com/nothings/)
+-   opencv, if u want to use videos u got have opencv, does all the heavy lifting, good stuff   
 
 # Dev Imgs
 ## Img To Ascii     
@@ -30,3 +34,6 @@ takes ur Vic (video, image , camera capture) removes the colors and slaps some a
 ## Video To Ascii    
 ![bad apple](./dev-imgs/bad_apple.gif)     
      
+
+
+LICSESE FOR FONT
